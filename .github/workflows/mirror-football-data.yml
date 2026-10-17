@@ -9,6 +9,7 @@ name: football-data aynası
 on:
   schedule:
     - cron: '17 5 * * *' # her gün 05:17 UTC
+    - cron: '17 13 * * *' # her gün 13:17 UTC (fikstür oranları için)
   workflow_dispatch:
     inputs:
       sezonlar:
@@ -54,12 +55,24 @@ jobs:
             done
           done
 
+      - name: Fikstür oranlarını indir
+        run: |
+          mkdir -p data/fixtures
+          for F in fixtures new_league_fixtures; do
+            if curl -sfL --max-time 60 -o "/tmp/$F.csv" "https://www.football-data.co.uk/$F.csv" && head -1 "/tmp/$F.csv" | grep -q "Home"; then
+              mv "/tmp/$F.csv" "data/fixtures/$F.csv"
+              echo "OK   $F ($(wc -l < "data/fixtures/$F.csv") satır)"
+            else
+              echo "ATLA $F"
+            fi
+          done
+
       - name: Değişiklikleri işle
         run: |
           set -euo pipefail
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/fd
+          git add data
           if git diff --cached --quiet; then
             echo "Değişiklik yok"
           else
